@@ -1,0 +1,55 @@
+version: '3.8'
+
+# ============================================================
+# Nexora CRM — Production Docker Compose Orchestration
+# ============================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nexora-crm-app
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - JWT_SECRET=nexora-enterprise-production-super-secret-key-change-me-immediately-in-prod
+      - JWT_EXPIRES_IN=7d
+      - MONGODB_URI=mongodb://mongo:27017/nexora_crm
+      - CLIENT_ORIGIN=http://localhost:3001
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - nexora-network
+
+  mongo:
+    image: mongo:7-jammy
+    container_name: nexora-crm-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=nexora_crm
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - nexora-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  nexora-network:
+    driver: bridge
+
